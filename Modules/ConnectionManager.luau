@@ -15,7 +15,7 @@ local function _ResolveEventSignal(instance, eventOrProperty)
         -- If it's not a PropertyChangedSignal, check if it's a normal event
         assert(typeof(instance[eventOrProperty].Connect) == "function", "Second argument must translate to type 'RBXScriptSignal'")
 
-        return instance.eventOrProperty -- Normal event
+        return instance[eventOrProperty] -- Normal event
     end
     return errorOrEvent -- PropertyChangedSignal (successfully fetched)
 end
@@ -101,7 +101,7 @@ end
 
 -- Make module functions case-insensitive
 return setmetatable(ConnectionManager, {
-	__index = function(_, index)
-		return rawget(ConnectionManager, index:lower())
-	end
+    __index = function(_, index)
+        return rawget(ConnectionManager, index:lower())
+    end
 })
