@@ -6,13 +6,27 @@ local function _Log(functionToCall, ...)
     functionToCall("ConnectionManager |", ...)
 end
 
+-- Resolve whether it's a property change signal or normal event
+local function _ResolveEventSignal(instance, eventOrProperty)
+    -- Try to fetch the PropertyChangedSignal if it exists
+    local pcallResult, errorOrEvent = pcall(instance.GetPropertyChangedSignal, instance, eventOrProperty) 
+
+    if not pcallResult then
+        -- If it's not a PropertyChangedSignal, check if it's a normal event
+        assert(typeof(instance[eventOrProperty].Connect) == "function", "Second argument must translate to type 'RBXScriptSignal'")
+
+        return instance.eventOrProperty -- Normal event
+    end
+    return errorOrEvent -- PropertyChangedSignal (successfully fetched)
+end
+
 -- Check if a connection exists
-function ConnectionManager.HasConnection(instance, event)
+function ConnectionManager.hasconnection(instance, event)
     return ConnectionManager.connections[instance] and (event and ConnectionManager.connections[instance][event] or true)
 end
 
 -- Get all connections for an instance
-function ConnectionManager.GetInstanceConnections(instance)
+function ConnectionManager.getinstanceconnections(instance)
     assert(not instance or typeof(instance) == "Instance", "First argument must be of type 'Instance' or 'nil'")
 
     if not ConnectionManager.HasConnection(instance) then return false end
@@ -21,16 +35,17 @@ function ConnectionManager.GetInstanceConnections(instance)
 end
 
 -- Connect to an event
-function ConnectionManager.Connect(instance, event, callback)
+function ConnectionManager.connect(instance, eventOrProperty, callback)
     assert(typeof(instance) == "Instance", "First argument must be of type 'Instance'")
-    assert(typeof(event) == "string", "Second argument must be of type 'string'")
-    assert(typeof(instance[event].Connect) == "function", "Second argument must translate to type 'RBXScriptSignal'")
+    assert(typeof(eventOrProperty) == "string", "Second argument must be of type 'string'")
     assert(typeof(callback) == "function", "Third argument must be of type 'function'")
 
-    if ConnectionManager.HasConnection(instance, event) then return false end -- Prevent duplicate connections (unsure of use cases)
+    eventOrProperty = _ResolveEventSignal(instance, eventOrProperty)
+
+    if ConnectionManager.HasConnection(instance, tostring(eventOrProperty)) then return false end -- Prevent duplicate connections (if needed...?)
 
     ConnectionManager.connections[instance] = ConnectionManager.connections[instance] or {} -- Initialize connections table if necessary
-    ConnectionManager.connections[instance][event] = instance[event]:Connect(callback)
+    ConnectionManager.connections[instance][tostring(eventOrProperty)] = eventOrProperty:Connect(callback)
 
     -- Handle deletion of the instance
     instance.Destroying:Once(function()
@@ -38,18 +53,20 @@ function ConnectionManager.Connect(instance, event, callback)
         ConnectionManager.DisconnectInstance(instance)
     end)
 
-    return ConnectionManager.connections[instance][event]
+    return ConnectionManager.connections[instance][tostring(eventOrProperty)]
 end
 
--- Disconnect a specific connection
-function ConnectionManager.Disconnect(instance, event)
+-- Disconnect a specific event
+function ConnectionManager.disconnect(instance, eventOrProperty)
     assert(typeof(instance) == "Instance", "First argument must be of type 'Instance'")
-    assert(typeof(event) == "string", "Second argument must be of type 'string'")
+    assert(typeof(eventOrProperty) == "string", "Second argument must be of type 'string'")
 
-    if not ConnectionManager.HasConnection(instance, event) then return false end
+    eventOrProperty = tostring(_ResolveEventSignal(instance, eventOrProperty))
 
-    ConnectionManager.connections[instance][event]:Disconnect()
-    ConnectionManager.connections[instance][event] = nil
+    if not ConnectionManager.HasConnection(instance, eventOrProperty) then return false end
+
+    ConnectionManager.connections[instance][eventOrProperty]:Disconnect()
+    ConnectionManager.connections[instance][eventOrProperty] = nil
 
     -- Clean up instance dictionary if no events are left
     if next(ConnectionManager.connections[instance]) == nil then
@@ -60,7 +77,7 @@ function ConnectionManager.Disconnect(instance, event)
 end
 
 -- Disconnect all connections for an instance
-function ConnectionManager.DisconnectInstance(instance)
+function ConnectionManager.disconnectinstance(instance)
     assert(typeof(instance) == "Instance", "Argument must be of type 'Instance'")
 
     if not ConnectionManager.HasConnection(instance) then return false end
@@ -74,7 +91,7 @@ function ConnectionManager.DisconnectInstance(instance)
 end
 
 -- Disconnect all connections across all instances
-function ConnectionManager.DisconnectAll()
+function ConnectionManager.disconnectall()
     for instance, _ in ConnectionManager.connections do
         ConnectionManager.DisconnectInstance(instance)
     end
@@ -82,4 +99,9 @@ function ConnectionManager.DisconnectAll()
     return true
 end
 
-return ConnectionManager
+-- Make module functions case-insensitive
+return setmetatable(ConnectionManager, {
+	__index = function(_, index)
+		return rawget(ConnectionManager, index:lower())
+	end
+})
