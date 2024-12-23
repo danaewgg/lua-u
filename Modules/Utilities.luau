@@ -1,5 +1,3 @@
-local SIGNATURE = "Utilities"
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
@@ -8,18 +6,27 @@ local IS_SERVER = RunService:IsServer()
 local IS_RUNNING = RunService:IsRunning()
 local IS_EXPLOIT = typeof(identifyexecutor) == "function"
 
-local Utilities = {}
+local Utilities = {
+	["Log Signature"] = nil
+}
+
+function Utilities.ChangeLogSignature(logSignature)
+	Utilities["Log Signature"] = logSignature
+
+	return true
+end
 
 function Utilities.GetIpInfo(ip)
 	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
+	assert(not IS_EXPLOIT or typeof(request) == "function", "Exploit does not support the following function: request()")
 
-	local link = ip and `https://api.ipapi.is/?q={ip}` or "https://api.ipapi.is"
+	local link = `https://api.ipapi.is/?q={ip}`
 	return IS_EXPLOIT and HttpService:JSONDecode(request({Url = link}).Body) or HttpService:JSONDecode(HttpService:GetAsync(link))
 end
 
 function Utilities.GetIpLocation(ip)
-	assert(IS_SERVER or IS_EXPLOIT, "Function must be executed from the server")
-	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups") -- If IP is given, ensure it is executed from an exploit 
+	assert(IS_SERVER or IS_EXPLOIT, "Function must be executed on the server")
+	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
 
 	local ip_info = Utilities.GetIpInfo(ip).location
 	return `{ip_info.city} ({ip_info.state}, {ip_info.country})`
@@ -28,14 +35,23 @@ end
 function Utilities.Log(functionToCall, ...)
 	assert(typeof(functionToCall) == "function", "1st argument (functionToCall) must be a function")
 
-	functionToCall(...)
+    local messageTuple = ...
+    if Utilities["Log Signature"] then
+        -- In the future, I want to make this work without messing up 
+        -- the functionality of being able to show tables on output in studio
+        messageTuple = `{Utilities["Log Signature"]} | {...}`
+    end
+
+	functionToCall(messageTuple)
+
+	return true
 end
 
 function Utilities.SwitchPlayerCharacter(player, newCharacter)
-	assert(IS_SERVER, "Function must be executed from the server")
+	assert(IS_SERVER, "Function must be executed on the server")
 
 	local OriginalCharacter = player.Character
-	newCharacter:PivotTo(OriginalCharacter:GetPivot()) -- Move before changing Player.Character (there's a small bug otherwise)
+	newCharacter:PivotTo(OriginalCharacter:GetPivot()) -- Move before changing player's .Character (there's a small bug otherwise)
 
 	newCharacter.Name = player.Name
 	player.Character = newCharacter -- Change before re-parenting for the CameraSubject to change
