@@ -10,13 +10,13 @@ local Utilities = {
 	["Log Signature"] = nil
 }
 
-function Utilities.ChangeLogSignature(logSignature)
+function Utilities.changelogsignature(logSignature)
 	Utilities["Log Signature"] = logSignature
 
 	return true
 end
 
-function Utilities.GetIpInfo(ip)
+function Utilities.getipinfo(ip)
 	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
 	assert(not IS_EXPLOIT or typeof(request) == "function", "Exploit does not support the following function: request()")
 
@@ -24,7 +24,7 @@ function Utilities.GetIpInfo(ip)
 	return IS_EXPLOIT and HttpService:JSONDecode(request({Url = link}).Body) or HttpService:JSONDecode(HttpService:GetAsync(link))
 end
 
-function Utilities.GetIpLocation(ip)
+function Utilities.getiplocation(ip)
 	assert(IS_SERVER or IS_EXPLOIT, "Function must be executed on the server")
 	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
 
@@ -32,7 +32,7 @@ function Utilities.GetIpLocation(ip)
 	return `{ip_info.city} ({ip_info.state}, {ip_info.country})`
 end
 
-function Utilities.Log(functionToCall, ...)
+function Utilities.log(functionToCall, ...)
 	assert(typeof(functionToCall) == "function", "1st argument (functionToCall) must be a function")
 
     local messageTuple = ...
@@ -47,7 +47,7 @@ function Utilities.Log(functionToCall, ...)
 	return true
 end
 
-function Utilities.SwitchPlayerCharacter(player, newCharacter)
+function Utilities.switchplayercharacter(player, newCharacter)
 	assert(IS_SERVER, "Function must be executed on the server")
 
 	local OriginalCharacter = player.Character
@@ -60,7 +60,7 @@ function Utilities.SwitchPlayerCharacter(player, newCharacter)
 	return newCharacter
 end
 
-function Utilities.EnforceR6()
+function Utilities.enforcer6()
 	assert(IS_SERVER, "Function must be executed on the server")
 	assert(IS_RUNNING, "Function must be executed while the server is running")
 
@@ -87,4 +87,9 @@ function Utilities.EnforceR6()
 	return true
 end
 
-return Utilities
+-- Make module functions case-insensitive
+return setmetatable(Utilities, {
+    __index = function(_, index)
+        return rawget(Utilities, index:lower())
+    end
+})
