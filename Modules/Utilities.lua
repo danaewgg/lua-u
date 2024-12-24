@@ -20,7 +20,7 @@ function Utilities.getipinfo(ip)
 	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
 	assert(not IS_EXPLOIT or typeof(request) == "function", "Exploit does not support the following function: request()")
 
-	local link = `https://api.ipapi.is/?q={ip}`
+	local link = ip and `https://api.ipapi.is/?q={ip}` or "https://api.ipapi.is/"
 	return IS_EXPLOIT and HttpService:JSONDecode(request({Url = link}).Body) or HttpService:JSONDecode(HttpService:GetAsync(link))
 end
 
@@ -29,6 +29,8 @@ function Utilities.getiplocation(ip)
 	assert(not ip or IS_EXPLOIT, "Function must be executed from an exploit for custom IP lookups")
 
 	local ip_info = Utilities.GetIpInfo(ip).location
+    assert(ip_info, "Passed IP is invalid")
+
 	return `{ip_info.city} ({ip_info.state}, {ip_info.country})`
 end
 
