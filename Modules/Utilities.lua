@@ -50,7 +50,7 @@ function Utilities.log(functionToCall, ...)
 end
 
 function Utilities.switchplayercharacter(player, newCharacter)
-	assert(IS_SERVER, "Function must be executed on the server")
+	assert(IS_SERVER or IS_EXPLOIT, "Function must be executed on the server")
 
 	local OriginalCharacter = player.Character
 	newCharacter:PivotTo(OriginalCharacter:GetPivot()) -- Move before changing player's .Character (there's a small bug otherwise)
